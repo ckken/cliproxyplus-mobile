@@ -7,12 +7,6 @@
     "orientation": "portrait",
     "icon": "./icons/ios/AppIcon.appiconset/icon-1024.png",
     "userInterfaceStyle": "light",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
-    "updates": {
-      "url": "https://u.expo.dev/acaedd05-5a2a-4843-a648-e025c08ce7b3"
-    },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -47,6 +41,13 @@
       "eas": {
         "projectId": "acaedd05-5a2a-4843-a648-e025c08ce7b3"
       }
-    }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/acaedd05-5a2a-4843-a648-e025c08ce7b3"
+    },
+    "scheme": "sub2apimobile"
   }
 }
