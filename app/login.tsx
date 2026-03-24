@@ -6,24 +6,18 @@ import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
-import { getAdminSettings, getDashboardStats } from '@/src/services/admin';
+import { getOverview } from '@/src/services/admin';
 import { queryClient } from '@/src/lib/query-client';
 import { adminConfigState, hasAuthenticatedAdminSession, saveAdminConfig } from '@/src/store/admin-config';
 
 const { useSnapshot } = require('valtio/react');
 
-const schema = z
-  .object({
-    baseUrl: z.string().min(1, '请输入服务器地址'),
-    adminApiKey: z.string(),
-  })
-  .refine((values) => values.adminApiKey.trim().length > 0, {
-    path: ['adminApiKey'],
-    message: '请输入 Admin Key',
-  });
+const schema = z.object({
+  baseUrl: z.string().min(1, '请输入管理地址'),
+  adminApiKey: z.string().min(1, '请输入 Management Password'),
+});
 
 type FormValues = z.infer<typeof schema>;
-type ConnectionState = 'idle' | 'checking' | 'error';
 
 const colors = {
   page: '#f4efe4',
@@ -32,41 +26,20 @@ const colors = {
   primary: '#1d5f55',
   text: '#16181a',
   subtext: '#6f665c',
-  border: '#e7dfcf',
   dangerBg: '#fbf1eb',
   danger: '#c25d35',
 };
-
-function getConnectionErrorMessage(error: unknown) {
-  if (error instanceof Error && error.message) {
-    switch (error.message) {
-      case 'BASE_URL_REQUIRED':
-        return '请先填写服务器地址。';
-      case 'ADMIN_API_KEY_REQUIRED':
-        return '请先填写 Admin Key。';
-      case 'INVALID_SERVER_RESPONSE':
-        return '当前地址返回的数据不正确，请确认它是可用的管理接口。';
-      default:
-        return error.message;
-    }
-  }
-
-  return '连接失败，请检查服务器地址、Admin Key 和网络连通性。';
-}
 
 export default function LoginScreen() {
   const config = useSnapshot(adminConfigState);
   const hasAccount = hasAuthenticatedAdminSession(config);
   const { control, handleSubmit, formState } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      baseUrl: config.baseUrl,
-      adminApiKey: config.adminApiKey,
-    },
+    defaultValues: { baseUrl: config.baseUrl, adminApiKey: config.adminApiKey },
   });
-  const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
-  const [connectionMessage, setConnectionMessage] = useState('');
-  const [showAdminKey, setShowAdminKey] = useState(false);
+  const [message, setMessage] = useState('');
+  const [checking, setChecking] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
 
   if (hasAccount) {
     return <Redirect href="/monitor" />;
@@ -77,29 +50,23 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingVertical: 24 }} keyboardShouldPersistTaps="handled">
         <View style={{ flex: 1, justifyContent: 'center', gap: 20 }}>
           <View style={{ gap: 8 }}>
-            <Text style={{ fontSize: 34, fontWeight: '800', color: colors.text }}>管理员入口</Text>
+            <Text style={{ fontSize: 34, fontWeight: '800', color: colors.text }}>CLIProxyAPI Plus Mobile</Text>
             <Text style={{ fontSize: 14, lineHeight: 22, color: colors.subtext }}>
-              首次进入请填写服务器地址和 Admin Key。连接成功后即可进入应用，并在“服务器”页管理多个服务器。
+              输入管理地址和 Management Password，验证通过后进入移动控制台。
             </Text>
           </View>
 
           <View style={{ backgroundColor: colors.card, borderRadius: 22, padding: 18, gap: 16 }}>
             <View>
-              <Text style={{ marginBottom: 8, fontSize: 12, color: colors.subtext }}>服务器地址</Text>
+              <Text style={{ marginBottom: 8, fontSize: 12, color: colors.subtext }}>管理地址</Text>
               <Controller
                 control={control}
                 name="baseUrl"
                 render={({ field: { onChange, value } }) => (
                   <TextInput
                     value={value}
-                    onChangeText={(text) => {
-                      if (connectionState !== 'idle') {
-                        setConnectionState('idle');
-                        setConnectionMessage('');
-                      }
-                      onChange(text);
-                    }}
-                    placeholder="例如：https://api.example.com"
+                    onChangeText={onChange}
+                    placeholder="例如：http://127.0.0.1:8080"
                     placeholderTextColor="#9b9081"
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -110,7 +77,7 @@ export default function LoginScreen() {
             </View>
 
             <View>
-              <Text style={{ marginBottom: 8, fontSize: 12, color: colors.subtext }}>Admin Key</Text>
+              <Text style={{ marginBottom: 8, fontSize: 12, color: colors.subtext }}>Management Password</Text>
               <Controller
                 control={control}
                 name="adminApiKey"
@@ -118,71 +85,47 @@ export default function LoginScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <TextInput
                       value={value}
-                      onChangeText={(text) => {
-                        if (connectionState !== 'idle') {
-                          setConnectionState('idle');
-                          setConnectionMessage('');
-                        }
-                        onChange(text);
-                      }}
-                      placeholder="admin-xxxxxxxx"
+                      onChangeText={onChange}
+                      placeholder="management-password"
                       placeholderTextColor="#9b9081"
                       autoCapitalize="none"
                       autoCorrect={false}
-                      secureTextEntry={!showAdminKey}
-                      style={{
-                        flex: 1,
-                        backgroundColor: colors.mutedCard,
-                        borderRadius: 16,
-                        paddingHorizontal: 16,
-                        paddingVertical: 14,
-                        fontSize: 16,
-                        color: colors.text,
-                      }}
+                      secureTextEntry={!showSecret}
+                      style={{ flex: 1, backgroundColor: colors.mutedCard, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: colors.text }}
                     />
-                    <Pressable
-                      onPress={() => setShowAdminKey((value) => !value)}
-                      style={{ backgroundColor: colors.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 }}
-                    >
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#4e463e' }}>{showAdminKey ? '隐藏' : '显示'}</Text>
+                    <Pressable onPress={() => setShowSecret((v) => !v)} style={{ backgroundColor: '#e7dfcf', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#4e463e' }}>{showSecret ? '隐藏' : '显示'}</Text>
                     </Pressable>
                   </View>
                 )}
               />
             </View>
 
-            {formState.errors.baseUrl || formState.errors.adminApiKey ? (
+            {(formState.errors.baseUrl || formState.errors.adminApiKey || message) ? (
               <View style={{ borderRadius: 14, backgroundColor: colors.dangerBg, paddingHorizontal: 14, paddingVertical: 12 }}>
-                <Text style={{ color: colors.danger, fontSize: 14 }}>{formState.errors.baseUrl?.message || formState.errors.adminApiKey?.message}</Text>
-              </View>
-            ) : null}
-
-            {connectionMessage ? (
-              <View style={{ borderRadius: 14, backgroundColor: colors.dangerBg, paddingHorizontal: 14, paddingVertical: 12 }}>
-                <Text style={{ color: colors.danger, fontSize: 14 }}>{connectionMessage}</Text>
+                <Text style={{ color: colors.danger, fontSize: 14 }}>{formState.errors.baseUrl?.message || formState.errors.adminApiKey?.message || message}</Text>
               </View>
             ) : null}
 
             <Pressable
-              style={{ backgroundColor: connectionState === 'checking' ? '#7ca89f' : colors.primary, borderRadius: 18, paddingVertical: 15, alignItems: 'center' }}
-              disabled={connectionState === 'checking'}
+              style={{ backgroundColor: checking ? '#7ca89f' : colors.primary, borderRadius: 18, paddingVertical: 15, alignItems: 'center' }}
+              disabled={checking}
               onPress={handleSubmit(async (values) => {
-                setConnectionState('checking');
-                setConnectionMessage('正在验证服务器连接...');
-
+                setChecking(true);
+                setMessage('');
                 try {
                   await saveAdminConfig(values);
                   queryClient.clear();
-                  await queryClient.fetchQuery({ queryKey: ['admin-settings'], queryFn: getAdminSettings });
-                  await queryClient.prefetchQuery({ queryKey: ['monitor-stats'], queryFn: getDashboardStats });
+                  await queryClient.fetchQuery({ queryKey: ['overview'], queryFn: getOverview });
                   router.replace('/monitor');
                 } catch (error) {
-                  setConnectionState('error');
-                  setConnectionMessage(getConnectionErrorMessage(error));
+                  setMessage(error instanceof Error ? error.message : '连接失败');
+                } finally {
+                  setChecking(false);
                 }
               })}
             >
-              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>{connectionState === 'checking' ? '连接中...' : '进入应用'}</Text>
+              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>{checking ? '连接中...' : '进入应用'}</Text>
             </Pressable>
           </View>
         </View>

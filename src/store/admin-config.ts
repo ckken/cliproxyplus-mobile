@@ -2,10 +2,10 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 const { proxy } = require('valtio');
 
-const BASE_URL_KEY = 'sub2api_base_url';
-const ADMIN_KEY_KEY = 'sub2api_admin_api_key';
-const ACCOUNTS_KEY = 'sub2api_accounts';
-const ACTIVE_ACCOUNT_ID_KEY = 'sub2api_active_account_id';
+const BASE_URL_KEY = 'cliproxyplus_base_url';
+const ADMIN_KEY_KEY = 'cliproxyplus_management_password';
+const ACCOUNTS_KEY = 'cliproxyplus_accounts';
+const ACTIVE_ACCOUNT_ID_KEY = 'cliproxyplus_active_account_id';
 const IS_WEB = Platform.OS === 'web';
 
 export type AdminAccountProfile = {
@@ -31,10 +31,7 @@ function getAccountLabel(baseUrl: string) {
 }
 
 function normalizeConfig(input: { baseUrl: string; adminApiKey: string }) {
-  return {
-    baseUrl: input.baseUrl.trim().replace(/\/$/, ''),
-    adminApiKey: input.adminApiKey.trim(),
-  };
+  return { baseUrl: input.baseUrl.trim().replace(/\/$/, ''), adminApiKey: input.adminApiKey.trim() };
 }
 
 function sortAccounts(accounts: AdminAccountProfile[]) {
@@ -42,29 +39,16 @@ function sortAccounts(accounts: AdminAccountProfile[]) {
 }
 
 function normalizeAccount(account: AdminAccountProfile): AdminAccountProfile {
-  return {
-    ...account,
-    adminApiKey: account.adminApiKey ?? '',
-    enabled: account.enabled ?? true,
-  };
+  return { ...account, adminApiKey: account.adminApiKey ?? '', enabled: account.enabled ?? true };
 }
 
 function sanitizeAccountsForWeb(accounts: AdminAccountProfile[]) {
-  if (!IS_WEB) {
-    return accounts;
-  }
-
-  return accounts.map((account) => ({
-    ...account,
-    adminApiKey: '',
-  }));
+  if (!IS_WEB) return accounts;
+  return accounts.map((account) => ({ ...account, adminApiKey: '' }));
 }
 
 function persistAdminApiKey(value: string) {
-  if (IS_WEB) {
-    return deleteItem(ADMIN_KEY_KEY);
-  }
-
+  if (IS_WEB) return deleteItem(ADMIN_KEY_KEY);
   return setItem(ADMIN_KEY_KEY, value);
 }
 
@@ -74,48 +58,30 @@ function persistAccounts(accounts: AdminAccountProfile[]) {
 
 export function hasAuthenticatedAdminSession(config: { baseUrl: string; adminApiKey: string }) {
   const hasBaseUrl = Boolean(config.baseUrl.trim());
-
-  if (!hasBaseUrl) {
-    return false;
-  }
-
-  if (!IS_WEB) {
-    return true;
-  }
-
+  if (!hasBaseUrl) return false;
+  if (!IS_WEB) return true;
   return Boolean(config.adminApiKey.trim());
 }
 
 function getNextActiveAccount(accounts: AdminAccountProfile[], activeAccountId?: string) {
   const enabledAccounts = accounts.filter((account) => account.enabled !== false);
-
   if (activeAccountId) {
     const preferred = enabledAccounts.find((account) => account.id === activeAccountId);
-    if (preferred) {
-      return preferred;
-    }
+    if (preferred) return preferred;
   }
-
   return enabledAccounts[0];
 }
 
 export function getDefaultAdminConfig() {
-  return {
-    baseUrl: '',
-    adminApiKey: '',
-  };
+  return { baseUrl: '', adminApiKey: '' };
 }
 
 async function getItem(key: string) {
   try {
     if (Platform.OS === 'web') {
-      if (typeof localStorage === 'undefined') {
-        return null;
-      }
-
+      if (typeof localStorage === 'undefined') return null;
       return localStorage.getItem(key);
     }
-
     return await SecureStore.getItemAsync(key);
   } catch {
     return null;
@@ -125,33 +91,21 @@ async function getItem(key: string) {
 async function setItem(key: string, value: string) {
   try {
     if (Platform.OS === 'web') {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(key, value);
-      }
-
+      if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
       return;
     }
-
     await SecureStore.setItemAsync(key, value);
-  } catch {
-    return;
-  }
+  } catch {}
 }
 
 async function deleteItem(key: string) {
   try {
     if (Platform.OS === 'web') {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem(key);
-      }
-
+      if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
       return;
     }
-
     await SecureStore.deleteItemAsync(key);
-  } catch {
-    return;
-  }
+  } catch {}
 }
 
 export const adminConfigState = proxy({
@@ -164,7 +118,6 @@ export const adminConfigState = proxy({
 
 export async function hydrateAdminConfig() {
   const defaults = getDefaultAdminConfig();
-
   try {
     const [baseUrl, adminApiKey, rawAccounts, activeAccountId] = await Promise.all([
       getItem(BASE_URL_KEY),
@@ -174,7 +127,6 @@ export async function hydrateAdminConfig() {
     ]);
 
     let accounts: AdminAccountProfile[] = [];
-
     if (rawAccounts) {
       try {
         const parsed = JSON.parse(rawAccounts) as AdminAccountProfile[];
@@ -189,16 +141,7 @@ export async function hydrateAdminConfig() {
         baseUrl,
         adminApiKey: IS_WEB ? defaults.adminApiKey : adminApiKey ?? defaults.adminApiKey,
       });
-
-      accounts = [
-        {
-          id: createAccountId(),
-          label: getAccountLabel(legacyConfig.baseUrl),
-          ...legacyConfig,
-          updatedAt: new Date().toISOString(),
-          enabled: true,
-        },
-      ];
+      accounts = [{ id: createAccountId(), label: getAccountLabel(legacyConfig.baseUrl), ...legacyConfig, updatedAt: new Date().toISOString(), enabled: true }];
     }
 
     const sortedAccounts = sortAccounts(accounts);
@@ -209,13 +152,6 @@ export async function hydrateAdminConfig() {
     adminConfigState.activeAccountId = nextActiveAccountId;
     adminConfigState.baseUrl = activeAccount?.baseUrl ?? defaults.baseUrl;
     adminConfigState.adminApiKey = activeAccount?.adminApiKey ?? defaults.adminApiKey;
-
-    await Promise.all([
-      persistAccounts(sortedAccounts),
-      nextActiveAccountId ? setItem(ACTIVE_ACCOUNT_ID_KEY, nextActiveAccountId) : deleteItem(ACTIVE_ACCOUNT_ID_KEY),
-      setItem(BASE_URL_KEY, activeAccount?.baseUrl ?? defaults.baseUrl),
-      persistAdminApiKey(activeAccount?.adminApiKey ?? defaults.adminApiKey),
-    ]);
   } finally {
     adminConfigState.hydrated = true;
   }
@@ -223,30 +159,14 @@ export async function hydrateAdminConfig() {
 
 export async function saveAdminConfig(input: { baseUrl: string; adminApiKey: string }) {
   adminConfigState.saving = true;
-
   try {
     const normalized = normalizeConfig(input);
     const nextUpdatedAt = new Date().toISOString();
-    const existingAccount = adminConfigState.accounts.find(
-      (account: AdminAccountProfile) => account.baseUrl === normalized.baseUrl && account.adminApiKey === normalized.adminApiKey
-    );
+    const existingAccount = adminConfigState.accounts.find((account: AdminAccountProfile) => account.baseUrl === normalized.baseUrl && account.adminApiKey === normalized.adminApiKey);
     const nextAccount: AdminAccountProfile = existingAccount
-      ? {
-          ...existingAccount,
-          label: getAccountLabel(normalized.baseUrl),
-          updatedAt: nextUpdatedAt,
-        }
-      : {
-          id: createAccountId(),
-          label: getAccountLabel(normalized.baseUrl),
-          ...normalized,
-          updatedAt: nextUpdatedAt,
-          enabled: true,
-        };
-    const nextAccounts = sortAccounts([
-      nextAccount,
-      ...adminConfigState.accounts.filter((account: AdminAccountProfile) => account.id !== nextAccount.id),
-    ]);
+      ? { ...existingAccount, label: getAccountLabel(normalized.baseUrl), updatedAt: nextUpdatedAt }
+      : { id: createAccountId(), label: getAccountLabel(normalized.baseUrl), ...normalized, updatedAt: nextUpdatedAt, enabled: true };
+    const nextAccounts = sortAccounts([nextAccount, ...adminConfigState.accounts.filter((account: AdminAccountProfile) => account.id !== nextAccount.id)]);
 
     await Promise.all([
       setItem(BASE_URL_KEY, normalized.baseUrl),
@@ -266,23 +186,9 @@ export async function saveAdminConfig(input: { baseUrl: string; adminApiKey: str
 
 export async function switchAdminAccount(accountId: string) {
   const account = adminConfigState.accounts.find((item: AdminAccountProfile) => item.id === accountId);
-
-  if (!account) {
-    return;
-  }
-
-  if (account.enabled === false) {
-    return;
-  }
-
-  const nextAccount = {
-    ...account,
-    updatedAt: new Date().toISOString(),
-  };
-  const nextAccounts = sortAccounts([
-    nextAccount,
-    ...adminConfigState.accounts.filter((item: AdminAccountProfile) => item.id !== accountId),
-  ]);
+  if (!account || account.enabled === false) return;
+  const nextAccount = { ...account, updatedAt: new Date().toISOString() };
+  const nextAccounts = sortAccounts([nextAccount, ...adminConfigState.accounts.filter((item: AdminAccountProfile) => item.id !== accountId)]);
 
   await Promise.all([
     setItem(BASE_URL_KEY, nextAccount.baseUrl),
@@ -300,35 +206,6 @@ export async function switchAdminAccount(accountId: string) {
 export async function removeAdminAccount(accountId: string) {
   const nextAccounts = adminConfigState.accounts.filter((item: AdminAccountProfile) => item.id !== accountId);
   const nextActiveAccount = getNextActiveAccount(nextAccounts, adminConfigState.activeAccountId === accountId ? '' : adminConfigState.activeAccountId);
-
-  await Promise.all([
-    persistAccounts(nextAccounts),
-    nextActiveAccount ? setItem(ACTIVE_ACCOUNT_ID_KEY, nextActiveAccount.id) : deleteItem(ACTIVE_ACCOUNT_ID_KEY),
-    setItem(BASE_URL_KEY, nextActiveAccount?.baseUrl ?? ''),
-    persistAdminApiKey(nextActiveAccount?.adminApiKey ?? ''),
-  ]);
-
-  adminConfigState.accounts = nextAccounts;
-  adminConfigState.activeAccountId = nextActiveAccount?.id ?? '';
-  adminConfigState.baseUrl = nextActiveAccount?.baseUrl ?? '';
-  adminConfigState.adminApiKey = nextActiveAccount?.adminApiKey ?? '';
-}
-
-export async function logoutAdminAccount() {
-  await Promise.all([setItem(BASE_URL_KEY, ''), persistAdminApiKey(''), deleteItem(ACTIVE_ACCOUNT_ID_KEY)]);
-
-  adminConfigState.activeAccountId = '';
-  adminConfigState.baseUrl = '';
-  adminConfigState.adminApiKey = '';
-}
-
-export async function setAdminAccountEnabled(accountId: string, enabled: boolean) {
-  const nextAccounts = sortAccounts(
-    adminConfigState.accounts.map((account: AdminAccountProfile) =>
-      account.id === accountId ? { ...account, enabled, updatedAt: new Date().toISOString() } : account
-    )
-  );
-  const nextActiveAccount = getNextActiveAccount(nextAccounts, enabled ? accountId : adminConfigState.activeAccountId);
 
   await Promise.all([
     persistAccounts(nextAccounts),

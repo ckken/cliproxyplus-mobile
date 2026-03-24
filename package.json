@@ -1,22 +1,18 @@
 {
-  "name": "sub2api-mobile",
-  "version": "1.0.0",
+  "name": "cliproxyplus-mobile",
+  "version": "0.1.0",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "proxy": "node server/index.js",
-    "dev:web-proxy": "concurrently -n proxy,web -c green,blue \"npm run proxy\" \"npm run web\"",
     "eas:build:development": "eas build --profile development",
     "eas:build:preview": "eas build --profile preview",
     "eas:build:production": "eas build --profile production",
     "eas:update:preview": "eas update --branch preview --message",
     "eas:update:production": "eas update --branch production --message",
-    "start:dev-client": "expo start --dev-client",
-    "eas:build:development:android": "eas build -p android --profile development",
-    "eas:build:development:ios": "eas build -p ios --profile development"
+    "start:dev-client": "expo start --dev-client"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
@@ -56,5 +52,5 @@
     "concurrently": "^9.2.1",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": false
 }
