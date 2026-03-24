@@ -26,7 +26,7 @@ http://127.0.0.1:8080
 ## Expo
 
 ```bash
-npm run eas:build:preview
+npx eas-cli@latest build --profile preview
 ```
 
 ## 注意
