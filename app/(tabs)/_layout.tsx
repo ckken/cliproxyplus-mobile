@@ -8,6 +8,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="keys" options={{ title: 'Keys', tabBarIcon: ({ color, size }) => <KeyRound color={color} size={size} /> }} />
       <Tabs.Screen name="logs" options={{ title: '日志', tabBarIcon: ({ color, size }) => <FileText color={color} size={size} /> }} />
       <Tabs.Screen name="settings" options={{ title: '设置', tabBarIcon: ({ color, size }) => <Settings2 color={color} size={size} /> }} />
+      <Tabs.Screen name="index" options={{ href: null }} />
     </Tabs>
   );
 }
