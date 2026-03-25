@@ -71,10 +71,20 @@ export type LogListResponse = {
 };
 
 export type RequestErrorLogsResponse = {
-  files?: Array<{
-    name: string;
-    size: number;
-    modified: number;
-  }>;
+  files?: RequestErrorLogFile[];
   [key: string]: unknown;
 };
+
+export type RequestErrorLogFile = {
+  name: string;
+  size: number;
+  modified: number;
+  [key: string]: unknown;
+};
+
+export type RequestErrorLogDetailResponse =
+  | string
+  | {
+      content?: string;
+      [key: string]: unknown;
+    };

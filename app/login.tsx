@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { getOverview } from '@/src/services/admin';
+import { AdminError } from '@/src/lib/admin-fetch';
 import { queryClient } from '@/src/lib/query-client';
 import { adminConfigState, hasAuthenticatedAdminSession, saveAdminConfig } from '@/src/store/admin-config';
 
@@ -119,7 +120,13 @@ export default function LoginScreen() {
                   await queryClient.fetchQuery({ queryKey: ['overview'], queryFn: getOverview });
                   router.replace('/monitor');
                 } catch (error) {
-                  setMessage(error instanceof Error ? error.message : '连接失败');
+                  if (error instanceof AdminError) {
+                    setMessage(error.userMessage);
+                  } else if (error instanceof Error) {
+                    setMessage(error.message);
+                  } else {
+                    setMessage('连接失败');
+                  }
                 } finally {
                   setChecking(false);
                 }

@@ -6,9 +6,11 @@ import type {
   LatestVersionPayload,
   LogListResponse,
   ManagementOverview,
+  RequestErrorLogDetailResponse,
   RequestErrorLogsResponse,
   UsagePayload,
 } from '@/src/types/admin';
+import { buildAdminRequestUrl, createAdminHeaders, getAdminRequestContext } from '@/src/lib/admin-fetch';
 
 export async function getOverview(): Promise<ManagementOverview> {
   const [usage, config, latestVersion] = await Promise.all([
@@ -53,6 +55,54 @@ export function getLogs(limit = 120) {
 
 export function getRequestErrorLogs() {
   return adminFetch<RequestErrorLogsResponse>('/v0/management/request-error-logs');
+}
+
+function isApiEnvelope(value: unknown): value is { code?: unknown; message?: unknown; reason?: unknown; data?: unknown } {
+  return Boolean(value && typeof value === 'object' && typeof (value as { code?: unknown }).code === 'number');
+}
+
+export async function getRequestErrorLogDetail(filename: string): Promise<RequestErrorLogDetailResponse> {
+  const { baseUrl } = getAdminRequestContext();
+  const response = await fetch(
+    buildAdminRequestUrl(baseUrl, `/v0/management/request-error-logs/${encodeURIComponent(filename)}`),
+    {
+      headers: createAdminHeaders(),
+    },
+  );
+
+  const rawText = await response.text();
+  const trimmed = rawText.trim();
+
+  if (!trimmed) {
+    if (!response.ok) {
+      throw new Error(response.statusText || 'REQUEST_FAILED');
+    }
+    return '';
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+
+    if (isApiEnvelope(parsed)) {
+      if (!response.ok || parsed.code !== 0) {
+        throw new Error((parsed.reason as string) || (parsed.message as string) || 'REQUEST_FAILED');
+      }
+
+      return (parsed.data ?? '') as RequestErrorLogDetailResponse;
+    }
+
+    if (!response.ok) {
+      throw new Error(response.statusText || 'REQUEST_FAILED');
+    }
+
+    return parsed as RequestErrorLogDetailResponse;
+  } catch {
+    if (!response.ok) {
+      throw new Error(trimmed || response.statusText || 'REQUEST_FAILED');
+    }
+
+    return rawText;
+  }
 }
 
 async function updateBoolean(path: string, value: boolean) {
