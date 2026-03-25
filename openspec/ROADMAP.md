@@ -13,6 +13,10 @@
 | 009 | 多账号管理 UX | P3 | ready | M | — | [spec](specs/009-account-management.md) |
 | 010 | 暗色模式 | P3 | ready | L | — | [spec](specs/010-dark-mode.md) |
 
+| 011 | 使用统计增强 | P0 | ready | M | — | [spec](specs/011-usage-statistics.md) |
+| 012 | 配额管理 | P0 | ready | M | — | [spec](specs/012-quota-management.md) |
+| 013 | 多登录账号管理 | P0 | ready | M | — | [spec](specs/013-account-management.md) |
+
 ## Status Legend
 
 - `ready` — 可被 agent 拾取开发

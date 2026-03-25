@@ -1,15 +1,15 @@
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { getOverview } from '@/src/services/admin';
 import { AdminError } from '@/src/lib/admin-fetch';
 import { queryClient } from '@/src/lib/query-client';
-import { adminConfigState, hasAuthenticatedAdminSession, saveAdminConfig } from '@/src/store/admin-config';
+import { adminConfigState, getDefaultAdminConfig, hasAuthenticatedAdminSession, saveAdminConfig } from '@/src/store/admin-config';
 
 const { useSnapshot } = require('valtio/react');
 
@@ -31,18 +31,35 @@ const colors = {
   danger: '#c25d35',
 };
 
+function toFirstParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+  return value;
+}
+
 export default function LoginScreen() {
   const config = useSnapshot(adminConfigState);
+  const params = useLocalSearchParams<{ addNew?: string | string[] }>();
+  const addNew = toFirstParam(params.addNew) === 'true';
   const hasAccount = hasAuthenticatedAdminSession(config);
-  const { control, handleSubmit, formState } = useForm<FormValues>({
+  const { control, handleSubmit, formState, reset } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { baseUrl: config.baseUrl, adminApiKey: config.adminApiKey },
+    defaultValues: addNew ? getDefaultAdminConfig() : { baseUrl: config.baseUrl, adminApiKey: config.adminApiKey },
   });
   const [message, setMessage] = useState('');
   const [checking, setChecking] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
 
-  if (hasAccount) {
+  useEffect(() => {
+    if (formState.isDirty) {
+      return;
+    }
+
+    reset(addNew ? getDefaultAdminConfig() : { baseUrl: config.baseUrl, adminApiKey: config.adminApiKey });
+  }, [addNew, config.adminApiKey, config.baseUrl, formState.isDirty, reset]);
+
+  if (hasAccount && !addNew) {
     return <Redirect href="/monitor" />;
   }
 

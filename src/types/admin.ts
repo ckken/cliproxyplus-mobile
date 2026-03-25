@@ -79,6 +79,13 @@ export type ConfigSummary = {
     strategy?: string;
   };
   'usage-statistics-enabled'?: boolean;
+  'quota-exceeded'?: {
+    'switch-project'?: boolean;
+    'switch-preview-model'?: boolean;
+  };
+  'max-retry-credentials'?: number;
+  'disable-cooling'?: boolean;
+  'commercial-mode'?: boolean;
   [key: string]: unknown;
 };
 

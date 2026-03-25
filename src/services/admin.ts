@@ -150,6 +150,24 @@ export function updateMaxRetryInterval(value: number) {
   return updateNumber('/v0/management/max-retry-interval', value);
 }
 
+export function updateQuotaExceeded(value: { 'switch-project': boolean; 'switch-preview-model': boolean }) {
+  return adminFetch<{ status: string }>('/v0/management/quota-exceeded', {
+    method: 'PUT',
+    body: JSON.stringify({ value }),
+  });
+}
+
+export function updateMaxRetryCredentials(value: number) {
+  return adminFetch<{ status: string }>('/v0/management/max-retry-credentials', {
+    method: 'PUT',
+    body: JSON.stringify({ value }),
+  });
+}
+
+export function updateDisableCooling(value: boolean) {
+  return updateBoolean('/v0/management/disable-cooling', value);
+}
+
 export function updateRoutingStrategy(value: string) {
   return updateString('/v0/management/routing/strategy', value);
 }
