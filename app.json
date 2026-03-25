@@ -45,6 +45,9 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
+    "updates": {
+      "url": "https://u.expo.dev/e5dd9be5-e27b-4720-b4d2-6bff12643abc"
+    },
     "scheme": "cliproxyplusmobile"
   }
 }

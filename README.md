@@ -27,6 +27,7 @@ http://127.0.0.1:8080
 
 ```bash
 npx eas-cli@latest build --profile preview
+npx eas-cli@latest update --branch preview --message "preview update"
 ```
 
 ## 注意
