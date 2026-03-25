@@ -107,3 +107,38 @@ export function updateRoutingStrategy(value: string) {
 export function updateProxyUrl(value: string) {
   return updateString('/v0/management/proxy-url', value);
 }
+
+export function updateClaudeKeys(value: unknown) {
+  return adminFetch<{ status: string }>('/v0/management/claude-api-key', {
+    method: 'PUT',
+    body: JSON.stringify({ value }),
+  });
+}
+
+export function updateCodexKeys(value: unknown) {
+  return adminFetch<{ status: string }>('/v0/management/codex-api-key', {
+    method: 'PUT',
+    body: JSON.stringify({ value }),
+  });
+}
+
+export function updateGeminiKeys(value: unknown) {
+  return adminFetch<{ status: string }>('/v0/management/gemini-api-key', {
+    method: 'PUT',
+    body: JSON.stringify({ value }),
+  });
+}
+
+export function updateGenericApiKeys(value: unknown) {
+  return adminFetch<{ status: string }>('/v0/management/api-keys', {
+    method: 'PUT',
+    body: JSON.stringify({ value }),
+  });
+}
+
+export function updateOpenAICompatibility(value: unknown) {
+  return adminFetch<{ status: string }>('/v0/management/openai-compatibility', {
+    method: 'PUT',
+    body: JSON.stringify({ value }),
+  });
+}

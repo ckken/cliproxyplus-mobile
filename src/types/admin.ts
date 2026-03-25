@@ -30,7 +30,18 @@ export type ManagementOverview = {
   latestVersion: LatestVersionPayload;
 };
 
+// Auth status response - structure varies by server version
+// Common patterns: { providers: [...] }, { oauth: {...} }, or flat key-value pairs
 export type AuthStatus = Record<string, unknown>;
+
+// Parsed provider for UI display
+export type AuthProvider = {
+  name: string;
+  authorized: boolean;
+  authUrl?: string;
+  lastVerified?: string;
+  raw?: unknown; // original data for fallback display
+};
 
 export type ConfigSummary = {
   'proxy-url'?: string;
@@ -48,6 +59,9 @@ export type ConfigSummary = {
 };
 
 export type ApiKeyCollection = Record<string, unknown>;
+
+// Individual API key string
+export type KeyEntry = string;
 
 export type LogListResponse = {
   lines?: string[];
