@@ -5,17 +5,41 @@ export type ApiEnvelope<T> = {
   data?: T;
 };
 
+export type UsageSeries = Record<string, number>;
+
+export type UsageModelStats = {
+  total_requests?: number;
+  success_count?: number;
+  failure_count?: number;
+  total_tokens?: number;
+  [key: string]: unknown;
+};
+
+export type UsageApiStats = {
+  total_requests?: number;
+  success_count?: number;
+  failure_count?: number;
+  total_tokens?: number;
+  models?: Record<string, UsageModelStats>;
+  [key: string]: unknown;
+};
+
+export type UsageUsagePayload = {
+  total_requests?: number;
+  success_count?: number;
+  failure_count?: number;
+  total_tokens?: number;
+  apis?: Record<string, UsageApiStats>;
+  requests_by_day?: UsageSeries;
+  tokens_by_day?: UsageSeries;
+  requests_by_hour?: UsageSeries;
+  tokens_by_hour?: UsageSeries;
+  [key: string]: unknown;
+};
+
 export type UsagePayload = {
-  usage?: {
-    total_requests?: number;
-    total_tokens?: number;
-    failed_requests?: number;
-    total_input_tokens?: number;
-    total_output_tokens?: number;
-    total_cache_read_tokens?: number;
-    total_cost_usd?: number;
-  };
   failed_requests?: number;
+  usage?: UsageUsagePayload;
   [key: string]: unknown;
 };
 

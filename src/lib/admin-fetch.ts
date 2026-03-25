@@ -156,15 +156,23 @@ export function classifyError(error: unknown): AdminError {
   return createAdminError('request_failed', message);
 }
 
-function classifyResponseError(path: string, response: Response, json: ApiEnvelope<unknown>, rawText: string) {
-  const responseMessage = [json.reason, json.message, rawText].filter(Boolean).join(' ');
+function isApiEnvelope(value: unknown): value is ApiEnvelope<unknown> {
+  return Boolean(value && typeof value === 'object' && typeof (value as { code?: unknown }).code === 'number');
+}
+
+function classifyResponseError(path: string, response: Response, body: unknown, rawText: string) {
+  const json = isApiEnvelope(body) ? body : undefined;
+  const responseMessage = [json?.reason, json?.message, rawText].filter(Boolean).join(' ');
   const normalized = responseMessage.toLowerCase();
 
-  if (response.status === 401 || response.status === 403 || json.code === 401 || json.code === 403) {
+  if (response.status === 401 || response.status === 403 || json?.code === 401 || json?.code === 403) {
     return createAdminError('auth', responseMessage || 'REQUEST_FAILED');
   }
 
-  if (matchesAnyPattern(normalized, AUTH_ERROR_PATTERNS) || (path.endsWith('/v0/management/config') && json.code !== 0)) {
+  if (
+    matchesAnyPattern(normalized, AUTH_ERROR_PATTERNS) ||
+    (path.endsWith('/v0/management/config') && json && json.code !== 0)
+  ) {
     return createAdminError('auth', responseMessage || 'REQUEST_FAILED');
   }
 
@@ -204,18 +212,26 @@ export async function adminFetch<T>(path: string, init: RequestInit = {}): Promi
     });
 
     const rawText = await response.text();
-    let json: ApiEnvelope<T>;
+    let json: unknown;
     try {
-      json = JSON.parse(rawText) as ApiEnvelope<T>;
+      json = JSON.parse(rawText) as unknown;
     } catch {
       throw createAdminError('invalid_response', rawText || 'INVALID_SERVER_RESPONSE');
     }
 
-    if (!response.ok || json.code !== 0) {
+    if (!response.ok) {
       throw classifyResponseError(path, response, json, rawText);
     }
 
-    return json.data as T;
+    if (isApiEnvelope(json)) {
+      if (json.code !== 0) {
+        throw classifyResponseError(path, response, json, rawText);
+      }
+
+      return json.data as T;
+    }
+
+    return json as T;
   } catch (error) {
     if (isAdminError(error)) throw error;
     throw classifyError(error);

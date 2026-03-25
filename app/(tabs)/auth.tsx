@@ -153,9 +153,28 @@ export function parseAuthProviders(data: AuthStatus | null | undefined): AuthPro
   return [{ name: 'Auth Status', authorized: false, raw: data }];
 }
 
+function getAuthEmptyStateMessage(data: AuthStatus | null | undefined, providers: AuthProvider[]): string {
+  if (
+    data &&
+    typeof data === 'object' &&
+    !Array.isArray(data) &&
+    typeof data.status === 'string' &&
+    data.status.toLowerCase() === 'ok' &&
+    providers.length === 0
+  ) {
+    return '授权状态正常，无独立 OAuth 提供商';
+  }
+
+  return '服务端未返回任何 OAuth 提供商信息。请检查服务端配置。';
+}
+
 export default function AuthScreen() {
   const query = useQuery({ queryKey: ['auth-status'], queryFn: getAuthStatus });
   const providers = useMemo(() => parseAuthProviders(query.data), [query.data]);
+  const emptyStateMessage = useMemo(
+    () => getAuthEmptyStateMessage(query.data, providers),
+    [providers, query.data]
+  );
 
   const hasError = query.isError && query.error instanceof Error;
   const isEmpty = query.isSuccess && providers.length === 0;
@@ -198,9 +217,13 @@ export default function AuthScreen() {
         {/* Empty state */}
         {isEmpty ? (
           <View style={{ backgroundColor: colors.card, borderRadius: 18, padding: 24, alignItems: 'center', gap: 8 }}>
-            <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>暂无 OAuth 提供商配置</Text>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text, textAlign: 'center' }}>
+              {emptyStateMessage}
+            </Text>
             <Text style={{ fontSize: 13, color: colors.subtext, textAlign: 'center' }}>
-              服务端未返回任何 OAuth 提供商信息。请检查服务端配置。
+              {emptyStateMessage === '授权状态正常，无独立 OAuth 提供商'
+                ? '服务端仅返回整体状态，没有单独的 OAuth 提供商条目。'
+                : '服务端未返回任何 OAuth 提供商信息。请检查服务端配置。'}
             </Text>
           </View>
         ) : null}

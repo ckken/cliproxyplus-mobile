@@ -54,14 +54,37 @@ export function extractKeys(data: unknown): { keys: string[]; isRaw: boolean } {
   // Object with array property
   if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
     const obj = data as Record<string, unknown>;
-    // Look for common array properties
-    for (const prop of ['keys', 'api_keys', 'apiKeys', 'api-keys', 'value', 'items']) {
+    // Look for common key container properties, including hyphenated service responses.
+    const propCandidates = [
+      'keys',
+      'api_keys',
+      'apiKeys',
+      'api-keys',
+      'value',
+      'items',
+      'claude-api-key',
+      'codex-api-key',
+      'gemini-api-key',
+      'openai-compatibility',
+    ];
+
+    for (const prop of propCandidates) {
+      if (!(prop in obj)) continue;
+
       const val = obj[prop];
+      if (val == null) {
+        continue;
+      }
       if (Array.isArray(val)) {
         const strings = val.filter((item): item is string => typeof item === 'string');
         if (strings.length > 0) return { keys: strings, isRaw: false };
+        continue;
+      }
+      if (typeof val === 'string' && val.length > 0) {
+        return { keys: [val], isRaw: false };
       }
     }
+
     // Check all properties for any array of strings
     for (const val of Object.values(obj)) {
       if (Array.isArray(val)) {
@@ -69,11 +92,13 @@ export function extractKeys(data: unknown): { keys: string[]; isRaw: boolean } {
         if (strings.length > 0) return { keys: strings, isRaw: false };
       }
     }
-    // Single string value property
-    if (typeof obj.value === 'string' && obj.value.length > 0) {
-      return { keys: [obj.value], isRaw: false };
+
+    // Treat null-only response objects as empty state rather than raw JSON.
+    const values = Object.values(obj);
+    if (values.length > 0 && values.every((val) => val == null || (Array.isArray(val) && val.length === 0))) {
+      return { keys: [], isRaw: false };
     }
-    // Empty object
+
     if (Object.keys(obj).length === 0) return { keys: [], isRaw: false };
   }
 
