@@ -5,41 +5,17 @@ export type ApiEnvelope<T> = {
   data?: T;
 };
 
-export type UsageSeries = Record<string, number>;
-
-export type UsageModelStats = {
-  total_requests?: number;
-  success_count?: number;
-  failure_count?: number;
-  total_tokens?: number;
-  [key: string]: unknown;
-};
-
-export type UsageApiStats = {
-  total_requests?: number;
-  success_count?: number;
-  failure_count?: number;
-  total_tokens?: number;
-  models?: Record<string, UsageModelStats>;
-  [key: string]: unknown;
-};
-
-export type UsageUsagePayload = {
-  total_requests?: number;
-  success_count?: number;
-  failure_count?: number;
-  total_tokens?: number;
-  apis?: Record<string, UsageApiStats>;
-  requests_by_day?: UsageSeries;
-  tokens_by_day?: UsageSeries;
-  requests_by_hour?: UsageSeries;
-  tokens_by_hour?: UsageSeries;
-  [key: string]: unknown;
-};
-
 export type UsagePayload = {
+  usage?: {
+    total_requests?: number;
+    total_tokens?: number;
+    failed_requests?: number;
+    total_input_tokens?: number;
+    total_output_tokens?: number;
+    total_cache_read_tokens?: number;
+    total_cost_usd?: number;
+  };
   failed_requests?: number;
-  usage?: UsageUsagePayload;
   [key: string]: unknown;
 };
 
@@ -54,18 +30,7 @@ export type ManagementOverview = {
   latestVersion: LatestVersionPayload;
 };
 
-// Auth status response - structure varies by server version
-// Common patterns: { providers: [...] }, { oauth: {...} }, or flat key-value pairs
 export type AuthStatus = Record<string, unknown>;
-
-// Parsed provider for UI display
-export type AuthProvider = {
-  name: string;
-  authorized: boolean;
-  authUrl?: string;
-  lastVerified?: string;
-  raw?: unknown; // original data for fallback display
-};
 
 export type ConfigSummary = {
   'proxy-url'?: string;
@@ -79,20 +44,10 @@ export type ConfigSummary = {
     strategy?: string;
   };
   'usage-statistics-enabled'?: boolean;
-  'quota-exceeded'?: {
-    'switch-project'?: boolean;
-    'switch-preview-model'?: boolean;
-  };
-  'max-retry-credentials'?: number;
-  'disable-cooling'?: boolean;
-  'commercial-mode'?: boolean;
   [key: string]: unknown;
 };
 
 export type ApiKeyCollection = Record<string, unknown>;
-
-// Individual API key string
-export type KeyEntry = string;
 
 export type LogListResponse = {
   lines?: string[];
@@ -102,20 +57,75 @@ export type LogListResponse = {
 };
 
 export type RequestErrorLogsResponse = {
-  files?: RequestErrorLogFile[];
+  files?: Array<{
+    name: string;
+    size: number;
+    modified: number;
+  }>;
   [key: string]: unknown;
 };
 
-export type RequestErrorLogFile = {
+// ===== 账号管理 =====
+export type AdminAccount = {
+  id: string;
   name: string;
-  size: number;
-  modified: number;
+  platform: 'openai' | 'claude' | 'gemini' | 'sora' | string;
+  type: 'api_key' | 'oauth' | 'refresh_token' | string;
+  status: 'active' | 'expired' | 'cooling' | 'error' | string;
+  credentials_preview?: string;
+  expires_at?: string | null;
+  quota_remaining?: number | null;
+  quota_total?: number | null;
+  last_used_at?: string | null;
+  created_at?: string;
+  error_message?: string | null;
   [key: string]: unknown;
 };
 
-export type RequestErrorLogDetailResponse =
-  | string
-  | {
-      content?: string;
-      [key: string]: unknown;
-    };
+export type AdminAccountListResponse = {
+  accounts: AdminAccount[];
+  total?: number;
+};
+
+export type AccountRefreshResult = {
+  success: boolean;
+  account_id: string;
+  new_expires_at?: string;
+  error?: string;
+};
+
+export type BatchRefreshResult = {
+  total: number;
+  success: number;
+  failed: number;
+  results?: AccountRefreshResult[];
+};
+
+export type QuotaWindowStats = {
+  total_requests?: number;
+  total_tokens?: number;
+  quota_limit?: number;
+  remaining?: number;
+  utilization?: number;
+  resets_at?: string;
+  remaining_seconds?: number;
+  window_stats?: {
+    requests: number;
+    tokens: number;
+    cost: number;
+  };
+  [key: string]: unknown;
+};
+
+export type AccountUsageInfo = {
+  five_hour: QuotaWindowStats | null;
+  seven_day: QuotaWindowStats | null;
+  [key: string]: unknown;
+};
+
+export type AccountTodayStats = {
+  requests?: number;
+  tokens?: number;
+  errors?: number;
+  [key: string]: unknown;
+};

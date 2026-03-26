@@ -1,16 +1,19 @@
 import { adminFetch } from '@/src/lib/admin-fetch';
 import type {
+  AccountRefreshResult,
+  AccountTodayStats,
+  AccountUsageInfo,
+  AdminAccountListResponse,
   ApiKeyCollection,
   AuthStatus,
+  BatchRefreshResult,
   ConfigSummary,
   LatestVersionPayload,
   LogListResponse,
   ManagementOverview,
-  RequestErrorLogDetailResponse,
   RequestErrorLogsResponse,
   UsagePayload,
 } from '@/src/types/admin';
-import { buildAdminRequestUrl, createAdminHeaders, getAdminRequestContext } from '@/src/lib/admin-fetch';
 
 export async function getOverview(): Promise<ManagementOverview> {
   const [usage, config, latestVersion] = await Promise.all([
@@ -55,54 +58,6 @@ export function getLogs(limit = 120) {
 
 export function getRequestErrorLogs() {
   return adminFetch<RequestErrorLogsResponse>('/v0/management/request-error-logs');
-}
-
-function isApiEnvelope(value: unknown): value is { code?: unknown; message?: unknown; reason?: unknown; data?: unknown } {
-  return Boolean(value && typeof value === 'object' && typeof (value as { code?: unknown }).code === 'number');
-}
-
-export async function getRequestErrorLogDetail(filename: string): Promise<RequestErrorLogDetailResponse> {
-  const { baseUrl } = getAdminRequestContext();
-  const response = await fetch(
-    buildAdminRequestUrl(baseUrl, `/v0/management/request-error-logs/${encodeURIComponent(filename)}`),
-    {
-      headers: createAdminHeaders(),
-    },
-  );
-
-  const rawText = await response.text();
-  const trimmed = rawText.trim();
-
-  if (!trimmed) {
-    if (!response.ok) {
-      throw new Error(response.statusText || 'REQUEST_FAILED');
-    }
-    return '';
-  }
-
-  try {
-    const parsed = JSON.parse(trimmed) as unknown;
-
-    if (isApiEnvelope(parsed)) {
-      if (!response.ok || parsed.code !== 0) {
-        throw new Error((parsed.reason as string) || (parsed.message as string) || 'REQUEST_FAILED');
-      }
-
-      return (parsed.data ?? '') as RequestErrorLogDetailResponse;
-    }
-
-    if (!response.ok) {
-      throw new Error(response.statusText || 'REQUEST_FAILED');
-    }
-
-    return parsed as RequestErrorLogDetailResponse;
-  } catch {
-    if (!response.ok) {
-      throw new Error(trimmed || response.statusText || 'REQUEST_FAILED');
-    }
-
-    return rawText;
-  }
 }
 
 async function updateBoolean(path: string, value: boolean) {
@@ -150,24 +105,6 @@ export function updateMaxRetryInterval(value: number) {
   return updateNumber('/v0/management/max-retry-interval', value);
 }
 
-export function updateQuotaExceeded(value: { 'switch-project': boolean; 'switch-preview-model': boolean }) {
-  return adminFetch<{ status: string }>('/v0/management/quota-exceeded', {
-    method: 'PUT',
-    body: JSON.stringify({ value }),
-  });
-}
-
-export function updateMaxRetryCredentials(value: number) {
-  return adminFetch<{ status: string }>('/v0/management/max-retry-credentials', {
-    method: 'PUT',
-    body: JSON.stringify({ value }),
-  });
-}
-
-export function updateDisableCooling(value: boolean) {
-  return updateBoolean('/v0/management/disable-cooling', value);
-}
-
 export function updateRoutingStrategy(value: string) {
   return updateString('/v0/management/routing/strategy', value);
 }
@@ -176,37 +113,47 @@ export function updateProxyUrl(value: string) {
   return updateString('/v0/management/proxy-url', value);
 }
 
-export function updateClaudeKeys(value: unknown) {
-  return adminFetch<{ status: string }>('/v0/management/claude-api-key', {
-    method: 'PUT',
-    body: JSON.stringify({ value }),
-  });
+// ===== 账号管理 API =====
+export function getAccounts() {
+  return adminFetch<AdminAccountListResponse>('/v0/management/accounts');
 }
 
-export function updateCodexKeys(value: unknown) {
-  return adminFetch<{ status: string }>('/v0/management/codex-api-key', {
-    method: 'PUT',
-    body: JSON.stringify({ value }),
-  });
+export function refreshAccount(accountId: string) {
+  return adminFetch<AccountRefreshResult>(
+    `/v0/management/accounts/${accountId}/refresh`,
+    { method: 'POST' }
+  );
 }
 
-export function updateGeminiKeys(value: unknown) {
-  return adminFetch<{ status: string }>('/v0/management/gemini-api-key', {
-    method: 'PUT',
-    body: JSON.stringify({ value }),
-  });
+export function batchRefreshAccounts(accountIds?: string[]) {
+  return adminFetch<BatchRefreshResult>(
+    '/v0/management/accounts/batch-refresh',
+    { method: 'POST', body: accountIds ? JSON.stringify({ account_ids: accountIds }) : undefined }
+  );
 }
 
-export function updateGenericApiKeys(value: unknown) {
-  return adminFetch<{ status: string }>('/v0/management/api-keys', {
-    method: 'PUT',
-    body: JSON.stringify({ value }),
-  });
+export function refreshOpenAIToken(refreshToken: string) {
+  return adminFetch<AccountRefreshResult>(
+    '/v0/management/openai/refresh-token',
+    { method: 'POST', body: JSON.stringify({ refresh_token: refreshToken }) }
+  );
 }
 
-export function updateOpenAICompatibility(value: unknown) {
-  return adminFetch<{ status: string }>('/v0/management/openai-compatibility', {
-    method: 'PUT',
-    body: JSON.stringify({ value }),
-  });
+export function getAccountUsage(accountId: string) {
+  return adminFetch<AccountUsageInfo>(
+    `/v0/management/accounts/${accountId}/usage`
+  );
+}
+
+export function resetAccountQuota(accountId: string) {
+  return adminFetch<{ status: string }>(
+    `/v0/management/accounts/${accountId}/reset-quota`,
+    { method: 'POST' }
+  );
+}
+
+export function getAccountTodayStats(accountId: string) {
+  return adminFetch<AccountTodayStats>(
+    `/v0/management/accounts/${accountId}/today-stats`
+  );
 }
