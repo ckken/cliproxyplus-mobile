@@ -2,6 +2,7 @@ import type { PropsWithChildren, ReactNode } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Edge } from 'react-native-safe-area-context';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Card } from 'heroui-native';
 
 type ScreenShellProps = PropsWithChildren<{
   title: string;
@@ -45,17 +46,19 @@ function ScreenHeader({
   }
 
   return (
-    <View className="mt-4 rounded-[24px] border border-[#e6dece] bg-[#fbf8f2] px-4 py-4">
-      <View className="flex-row items-start justify-between gap-4">
-        <View className="flex-1">
-          <Text className="text-[24px] font-bold tracking-tight text-[#16181a]">{title}</Text>
-          <Text numberOfLines={1} className="mt-1 text-xs leading-4 text-[#9a9082]">
-            {subtitle}
-          </Text>
+    <Card className="mt-4 rounded-[24px] border border-[#e6dece] bg-[#fbf8f2]">
+      <Card.Body className="px-4 py-4">
+        <View className="flex-row items-start justify-between gap-4">
+          <View className="flex-1">
+            <Card.Title className="text-[24px] font-bold tracking-tight text-[#16181a]">{title}</Card.Title>
+            <Card.Description className="mt-1 text-xs leading-4 text-[#9a9082]" numberOfLines={1}>
+              {subtitle}
+            </Card.Description>
+          </View>
+          {right}
         </View>
-        {right}
-      </View>
-    </View>
+      </Card.Body>
+    </Card>
   );
 }
 
