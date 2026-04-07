@@ -26,15 +26,13 @@ npm start
 ```
 app/(tabs)/monitor.tsx    概览仪表盘
 app/(tabs)/keys.tsx       API Keys 展示（当前只读 JSON）
-app/(tabs)/auth.tsx       OAuth 状态（当前只读 JSON）
-app/(tabs)/logs.tsx       日志查看器
 app/(tabs)/settings.tsx   配置编辑（开关 + 文本输入）
 app/login.tsx             登录表单（zod 校验）
 src/services/admin.ts     所有管理 API 调用
 src/lib/admin-fetch.ts    Fetch 封装（认证 + 信封解析）
 src/store/admin-config.ts Valtio 状态 + SecureStore 持久化
 src/types/admin.ts        TypeScript 类型定义
-src/components/           共享 UI：ScreenShell, StatCard, DetailRow, ListCard, 图表组件
+src/components/           共享 UI：ScreenShell, StatCard, DetailRow, 图表组件
 ```
 
 ## 添加 API 调用

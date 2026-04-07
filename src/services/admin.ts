@@ -1,18 +1,12 @@
 import { adminFetch } from '@/src/lib/admin-fetch';
 import type {
-  AccountRefreshResult,
-  AccountTodayStats,
-  AccountUsageInfo,
-  AdminAccountListResponse,
   ApiKeyCollection,
   AuthStatus,
-  BatchRefreshResult,
   ConfigSummary,
   LatestVersionPayload,
-  LogListResponse,
   ManagementOverview,
-  RequestErrorLogsResponse,
   UsagePayload,
+  QuotaExceededConfig,
 } from '@/src/types/admin';
 
 export async function getOverview(): Promise<ManagementOverview> {
@@ -50,14 +44,6 @@ export function getGenericApiKeys() {
 
 export function getOpenAICompatibility() {
   return adminFetch<ApiKeyCollection>('/v0/management/openai-compatibility');
-}
-
-export function getLogs(limit = 120) {
-  return adminFetch<LogListResponse>(`/v0/management/logs?limit=${limit}`);
-}
-
-export function getRequestErrorLogs() {
-  return adminFetch<RequestErrorLogsResponse>('/v0/management/request-error-logs');
 }
 
 async function updateBoolean(path: string, value: boolean) {
@@ -113,47 +99,17 @@ export function updateProxyUrl(value: string) {
   return updateString('/v0/management/proxy-url', value);
 }
 
-// ===== 账号管理 API =====
-export function getAccounts() {
-  return adminFetch<AdminAccountListResponse>('/v0/management/accounts');
+export function updateQuotaExceeded(value: QuotaExceededConfig) {
+  return adminFetch<{ status: string }>('/v0/management/quota-exceeded', {
+    method: 'PUT',
+    body: JSON.stringify({ value }),
+  });
 }
 
-export function refreshAccount(accountId: string) {
-  return adminFetch<AccountRefreshResult>(
-    `/v0/management/accounts/${accountId}/refresh`,
-    { method: 'POST' }
-  );
+export function updateMaxRetryCredentials(value: number) {
+  return updateNumber('/v0/management/max-retry-credentials', value);
 }
 
-export function batchRefreshAccounts(accountIds?: string[]) {
-  return adminFetch<BatchRefreshResult>(
-    '/v0/management/accounts/batch-refresh',
-    { method: 'POST', body: accountIds ? JSON.stringify({ account_ids: accountIds }) : undefined }
-  );
-}
-
-export function refreshOpenAIToken(refreshToken: string) {
-  return adminFetch<AccountRefreshResult>(
-    '/v0/management/openai/refresh-token',
-    { method: 'POST', body: JSON.stringify({ refresh_token: refreshToken }) }
-  );
-}
-
-export function getAccountUsage(accountId: string) {
-  return adminFetch<AccountUsageInfo>(
-    `/v0/management/accounts/${accountId}/usage`
-  );
-}
-
-export function resetAccountQuota(accountId: string) {
-  return adminFetch<{ status: string }>(
-    `/v0/management/accounts/${accountId}/reset-quota`,
-    { method: 'POST' }
-  );
-}
-
-export function getAccountTodayStats(accountId: string) {
-  return adminFetch<AccountTodayStats>(
-    `/v0/management/accounts/${accountId}/today-stats`
-  );
+export function updateDisableCooling(value: boolean) {
+  return updateBoolean('/v0/management/disable-cooling', value);
 }

@@ -137,19 +137,6 @@ export function formatCountdown(remainingSeconds: number): string {
   return `${seconds}s`;
 }
 
-export function formatExpiryStatus(expiresAt: string | null | undefined): { text: string; level: 'success' | 'warning' | 'danger' | 'muted' } {
-  if (!expiresAt) return { text: '永不过期', level: 'muted' };
-  const now = Date.now();
-  const expiry = new Date(expiresAt).getTime();
-  const diff = expiry - now;
-  if (diff <= 0) return { text: '已过期', level: 'danger' };
-  const hours = Math.floor(diff / 3600000);
-  if (hours < 24) return { text: `${hours}h 后过期`, level: 'danger' };
-  const days = Math.floor(hours / 24);
-  if (days < 7) return { text: `${days}天后过期`, level: 'warning' };
-  return { text: `${days}天后过期`, level: 'success' };
-}
-
 export function formatPercentage(value: number): string {
   return `${Math.round(value * 10) / 10}%`;
 }

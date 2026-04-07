@@ -60,7 +60,7 @@ export default function LoginScreen() {
   }, [addNew, config.adminApiKey, config.baseUrl, formState.isDirty, reset]);
 
   if (hasAccount && !addNew) {
-    return <Redirect href="/statistics" />;
+    return <Redirect href="/monitor" />;
   }
 
   return (
@@ -135,7 +135,7 @@ export default function LoginScreen() {
                   await saveAdminConfig(values);
                   queryClient.clear();
                   await queryClient.fetchQuery({ queryKey: ['overview'], queryFn: getOverview });
-                  router.replace('/statistics');
+                  router.replace('/monitor');
                 } catch (error) {
                   if (error instanceof AdminError) {
                     setMessage(error.userMessage);
