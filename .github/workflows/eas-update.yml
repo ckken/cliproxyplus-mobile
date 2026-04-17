@@ -1,0 +1,106 @@
+name: EAS Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Target branch
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - production
+      platform:
+        description: Target platform
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - android
+          - ios
+      message:
+        description: Update message
+        required: true
+        default: manual ota update
+        type: string
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Trigger EAS update
+        run: npx eas-cli@latest update --non-interactive --json --branch "${{ inputs.branch }}" --platform "${{ inputs.platform }}" --message "${{ inputs.message }}" > eas-update.json
+
+      - name: Publish update info in workflow summary
+        env:
+          BRANCH: ${{ inputs.branch }}
+          PLATFORM: ${{ inputs.platform }}
+          MESSAGE: ${{ inputs.message }}
+        run: |
+          node <<'EOF'
+          const fs = require('node:fs');
+
+          const raw = fs.readFileSync('eas-update.json', 'utf8').trim();
+          const parsed = JSON.parse(raw);
+          const updates = Array.isArray(parsed) ? parsed : [parsed];
+
+          const first = updates[0] || {};
+          const updateGroupId =
+            first.updateGroupId ||
+            first.groupId ||
+            first.group ||
+            first?.group?.id ||
+            first?.group?.uuid ||
+            null;
+
+          const lines = [];
+          if (updateGroupId) lines.push(`- Update group ID: \`${updateGroupId}\``);
+          if (process.env.BRANCH) lines.push(`- Branch: \`${process.env.BRANCH}\``);
+          if (process.env.PLATFORM) lines.push(`- Platform: \`${process.env.PLATFORM}\``);
+          if (process.env.MESSAGE) lines.push(`- Message: \`${process.env.MESSAGE}\``);
+
+          for (const u of updates) {
+            const platform = String(u.platform || 'unknown').toUpperCase();
+            const updateId = u.id || u.updateId || u?.update?.id;
+            if (updateId) lines.push(`- ${platform} update ID: \`${updateId}\``);
+          }
+
+          const summary = [
+            '## EAS Update Results',
+            '',
+            ...(lines.length > 0 ? lines : ['- Update finished, but no IDs were returned by EAS CLI.']),
+          ].join('\n');
+
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary}\n`);
+          EOF
+
+      - name: Upload update JSON
+        uses: actions/upload-artifact@v4
+        with:
+          name: eas-update-json
+          path: eas-update.json
